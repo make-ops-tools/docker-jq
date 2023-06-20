@@ -31,8 +31,11 @@ jobs:
     uses: ./.github/workflows/cloc-repository.yaml
   scan-dependencies:
     uses: ./.github/workflows/scan-dependencies.yaml
-  cicd-pipeline-test:
+  cicd-pipeline-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     needs:
       [
         get-metadata,
@@ -51,6 +54,13 @@ jobs:
           export BUILD_TIMESTAMP="${{ needs.get-metadata.outputs.build_timestamp }}"
           export BUILD_EPOCH="${{ needs.get-metadata.outputs.build_epoch }}"
           make list-variables
-      # - name: Run Tests ...
-      #   run: |
-      #     ?
+      - name: Log in to the GitHub container registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        run: |
+          make build
+          make push
